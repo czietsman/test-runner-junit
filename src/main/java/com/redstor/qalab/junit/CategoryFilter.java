@@ -8,6 +8,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * This filter is based on the category filter in: org.junit.experimental.categories.Categories.CategoryFilter
+ *
+ * It has been adapted to allow for specifying inclusion and exclusion lists instead of only single category for
+ * classes inclusion and/or exclusion
+ */
 class CategoryFilter extends Filter {
     private final List<Class<?>> fIncluded;
 

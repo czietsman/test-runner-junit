@@ -9,6 +9,11 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+/**
+ * This class is an adaption of the code found on StackOverflow
+ *
+ * @author http://stackoverflow.com/a/60766
+ */
 class ClassPathHack {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClassPathHack.class);
     private static final Class<?>[] parameters = new Class<?>[]{URL.class};

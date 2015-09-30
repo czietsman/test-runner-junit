@@ -18,6 +18,13 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import static com.redstor.qalab.junit.Markers.VERBOSE;
 
+/**
+ * This class was originally adapted from the ClasspathSuite code.
+ *
+ * It has been modified to use ASM instead of reflection and adjusted to filter on jar files instead of class files.
+ *
+ * @author https://github.com/takari/takari-cpsuite
+ */
 class JarClassesFinder implements ClassesFinder {
     private static final Logger LOGGER = LoggerFactory.getLogger(JarClassesFinder.class);
     private static final int CLASS_SUFFIX_LENGTH = ".class".length();
