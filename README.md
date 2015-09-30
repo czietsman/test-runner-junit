@@ -1,6 +1,9 @@
 # test-runner-junit
 Tool to execute junit tests
 
+[![Build Status](https://travis-ci.org/czietsman/test-runner-junit.svg)]
+(https://travis-ci.org/czietsman/test-runner-junit)
+
 ## Usage
 Copy all application and junit test jars into one or more directories.
 
