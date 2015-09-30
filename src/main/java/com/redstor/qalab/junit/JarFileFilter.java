@@ -1,7 +1,5 @@
 package com.redstor.qalab.junit;
 
-import java.util.Locale;
-
 interface JarFileFilter {
     boolean match(String fileName);
 
@@ -13,7 +11,12 @@ interface JarFileFilter {
         return fileName -> true;
     }
 
-    static JarFileFilter endsWith(String suffix) {
-        return fileName -> fileName.toLowerCase(Locale.ENGLISH).endsWith(suffix);
+    static JarFileFilter pattern(String pattern) {
+        return fileName -> new WildcardPattern(pattern).match(fileName);
+    }
+
+    static JarFileFilter not(JarFileFilter filter) {
+        return fileName -> !filter.match(fileName);
     }
 }
+

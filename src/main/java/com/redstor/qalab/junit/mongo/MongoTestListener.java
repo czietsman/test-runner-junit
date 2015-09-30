@@ -2,6 +2,7 @@ package com.redstor.qalab.junit.mongo;
 
 import com.google.common.base.Charsets;
 import com.mongodb.client.MongoCollection;
+import com.redstor.qalab.junit.CoverageAgent;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -12,11 +13,13 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.time.Instant;
+import java.util.Optional;
 
 class MongoTestListener extends RunListener {
     private static final Charset CHARSET = Charsets.UTF_8;
     private final MongoCollection<MongoTestRun> testRuns;
     private final MongoCollection<MongoTestPoint> testPoints;
+    private final Optional<CoverageAgent> agent;
 
     enum Outcome {
         PASSED,
@@ -35,9 +38,10 @@ class MongoTestListener extends RunListener {
     private Outcome outcome;
     private Failure failure;
 
-    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints) {
+    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<CoverageAgent> agent) {
         this.testRuns = testRuns;
         this.testPoints = testPoints;
+        this.agent = agent;
         this.defaultStdOut = System.out;
         this.defaultStdErr = System.err;
     }
@@ -55,6 +59,7 @@ class MongoTestListener extends RunListener {
         run.setRunCount(result.getRunCount());
         run.setIgnoreCount(result.getIgnoreCount());
         run.setFailureCount(result.getFailureCount());
+        agent.ifPresent(a -> run.setExecutionData(a.getExecutionData(false)));
 
         testRuns.findOneAndReplace(run.find(), run);
     }

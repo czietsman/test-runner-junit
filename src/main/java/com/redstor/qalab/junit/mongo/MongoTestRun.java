@@ -76,6 +76,18 @@ class MongoTestRun implements Bson {
         document.put("failureCount", failureCount);
     }
 
+    public byte[] getExecutionData() {
+        return document.get("executionData", byte[].class);
+    }
+
+    public void setExecutionData(byte[] data) {
+        if (data == null) {
+            document.remove("executionData");
+        } else {
+            document.put("executionData", data);
+        }
+    }
+
     @Override
     public <TDocument> BsonDocument toBsonDocument(Class<TDocument> tDocumentClass, CodecRegistry codecRegistry) {
         return document.toBsonDocument(tDocumentClass, codecRegistry);

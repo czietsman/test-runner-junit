@@ -1,7 +1,5 @@
 package com.redstor.qalab.junit;
 
-import java.util.List;
-
-interface ClassesFinder {
-    List<Class<?>> find();
+public interface ClassesFinder {
+    <T extends ClassCollector> T find(T collector);
 }

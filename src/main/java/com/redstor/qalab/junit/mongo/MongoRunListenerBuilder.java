@@ -5,9 +5,12 @@ import com.mongodb.MongoClientOptions;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.redstor.qalab.junit.CoverageAgent;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.junit.runner.notification.RunListener;
+
+import java.util.Optional;
 
 public class MongoRunListenerBuilder {
     private String host = "localhost";
@@ -15,6 +18,7 @@ public class MongoRunListenerBuilder {
     private String databaseName = "junit-tests";
     private String testRunsCollectionName = "testruns";
     private String testPointsCollectionName = "testpoints";
+    private CoverageAgent agent = null;
 
     public MongoRunListenerBuilder host(final String host) {
         this.host = host;
@@ -41,6 +45,11 @@ public class MongoRunListenerBuilder {
         return this;
     }
 
+    public MongoRunListenerBuilder agent(final CoverageAgent agent) {
+        this.agent = agent;
+        return this;
+    }
+
     public RunListener build() {
         final CodecRegistry defaultCodecRegistry = MongoClient.getDefaultCodecRegistry();
         CodecRegistry codecRegistry = CodecRegistries.fromRegistries(
@@ -57,6 +66,6 @@ public class MongoRunListenerBuilder {
         final MongoDatabase database = mongo.getDatabase(databaseName);
         final MongoCollection<MongoTestRun> testRuns = database.getCollection(testRunsCollectionName, MongoTestRun.class);
         final MongoCollection<MongoTestPoint> testPoints = database.getCollection(testPointsCollectionName, MongoTestPoint.class);
-        return new MongoTestListener(testRuns, testPoints);
+        return new MongoTestListener(testRuns, testPoints, Optional.ofNullable(agent));
     }
 }

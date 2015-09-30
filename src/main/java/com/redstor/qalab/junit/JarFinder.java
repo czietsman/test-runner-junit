@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
-interface JarFinder {
+public interface JarFinder {
     Iterator<File> find();
 
     default JarFinder and(JarFinder other) {
