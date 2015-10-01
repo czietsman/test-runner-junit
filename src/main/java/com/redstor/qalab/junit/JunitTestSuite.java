@@ -23,7 +23,8 @@ public class JunitTestSuite {
     private static final Logger LOGGER = LoggerFactory.getLogger(JunitTestSuite.class);
     private final OptionParser parser;
     private final OptionSpec<String> jarFoldersOption;
-    private final OptionSpec<String> testJarPatternOption;
+    private final OptionSpec<String> testJarIncludePatternOption;
+    private final OptionSpec<String> testJarExcludePatternOption;
     private final OptionSpec<Void> verboseOption;
     private final OptionSpec<Void> dryRunOption;
     private final OptionSpec<PublishTarget> publishOption;
@@ -32,24 +33,27 @@ public class JunitTestSuite {
     private final OptionSpec<String> mongoRunIdOption;
     private final OptionSpec<Void> helpOption;
     private final OptionSpec<CoverageTool> coverageOption;
-    private final OptionSpec<String> coverageJarPatternOption;
-    private final OptionSpec<Void> reportCoverageOption;
+    private final OptionSpec<String> coverageJarIncludePatternOption;
+    private final OptionSpec<String> coverageJarExcludePatternOption;
+    private final OptionSpec<Void> coverageReportOption;
     private final OptionSpec<String> includeCategoryOption;
     private final OptionSpec<String> excludeCategoryOption;
 
     public JunitTestSuite() {
         parser = new OptionParser();
-        jarFoldersOption = parser.nonOptions("jar folders");
-        testJarPatternOption = parser.accepts("test-jars", "Jar pattern in which to search for tests").withRequiredArg().defaultsTo("*.jar");
+        jarFoldersOption = parser.nonOptions("folders scanned for jars");
+        testJarIncludePatternOption = parser.acceptsAll(Arrays.asList("ti", "test-include-jars"), "Jar filename pattern to include for tests").withRequiredArg();
+        testJarExcludePatternOption = parser.acceptsAll(Arrays.asList("te", "test-exclude-jars"), "Jar filename pattern to exclude from tests").withRequiredArg();
         verboseOption = parser.accepts("verbose", "Print verbose information about jar and class discovery");
         dryRunOption = parser.accepts("dry-run", "Load all jars and find all classes to test, but do not execute any tests");
         publishOption = parser.accepts("publish", "Publish results [Console, MongoDB]").withRequiredArg().ofType(PublishTarget.class).defaultsTo(PublishTarget.Console);
         mongoHostOption = parser.accepts("mongo-host", "MongoDB host").withRequiredArg().defaultsTo("localhost");
         mongoPortOption = parser.accepts("mongo-port", "MongoDB port").withRequiredArg().ofType(Integer.class).defaultsTo(27017);
         mongoRunIdOption = parser.accepts("mongo-run-id", "MongoDB test run id").withRequiredArg();
-        coverageOption = parser.accepts("coverage", "Tool to use to track test coverage [None, Jacoco]").withRequiredArg().ofType(CoverageTool.class).defaultsTo(CoverageTool.None);
-        coverageJarPatternOption = parser.accepts("coverage-jars", "Jar pattern for which to generate coverage reports").withRequiredArg().defaultsTo("*.jar");
-        reportCoverageOption = parser.accepts("report-coverage", "Generate a coverage report");
+        coverageOption = parser.accepts("coverage", "Tool to use to track test coverage [None, JaCoCo]").withRequiredArg().ofType(CoverageTool.class).defaultsTo(CoverageTool.None);
+        coverageJarIncludePatternOption = parser.acceptsAll(Arrays.asList("ci", "coverage-include-jars"), "Jar filename pattern to include for coverage reports").withRequiredArg();
+        coverageJarExcludePatternOption = parser.acceptsAll(Arrays.asList("ce", "coverage-exclude-jars"), "Jar filename pattern to exclude from coverage reports").withRequiredArg();
+        coverageReportOption = parser.accepts("coverage-report", "Save a coverage report");
 
         helpOption = parser.accepts("help").forHelp();
         includeCategoryOption = parser.accepts("include", "Category to include").withRequiredArg().describedAs("Category class name");
@@ -108,8 +112,10 @@ public class JunitTestSuite {
         testJarToLoadFinder.find().forEachRemaining(ClassPathHack::addFile);
 
         // find the classes to test
-        final JarFileFilter testJarFileFilter = JarFileFilter.pattern(options.valueOf(testJarPatternOption));
+        final JarFileFilter testJarFileFilter = createTestJarFileFilter(options, testJarIncludePatternOption, testJarExcludePatternOption);
         final JarFinder testJarToTestFinder = concatenateDirectoryJarFinders(jarFolders, testJarFileFilter);
+
+        LOGGER.info("Search for test classes");
         final Class<?>[] classes = getSortedTestClasses(new JarClassesFinder(testJarToTestFinder).find(new TestClassCollector()).toList());
 
         // if this is a dry-run then stop here
@@ -132,12 +138,15 @@ public class JunitTestSuite {
         }
 
         agent.reset();
+
+        LOGGER.info("Testing started");
         final Result result = junit.run(request);
+        LOGGER.info("Testing finished");
 
         // save the coverage report
-        if (options.has(reportCoverageOption)) {
+        if (options.has(coverageReportOption)) {
             LOGGER.info("Dumping coverage report");
-            final JarFileFilter reportJarFileFilter = JarFileFilter.pattern(options.valueOf(coverageJarPatternOption)).and(JarFileFilter.not(testJarFileFilter));
+            final JarFileFilter reportJarFileFilter = createTestJarFileFilter(options, coverageJarIncludePatternOption, coverageJarExcludePatternOption);
             final JarFinder reportJarFinder = concatenateDirectoryJarFinders(jarFolders, reportJarFileFilter);
             agent.publish(new JarClassesFinder(reportJarFinder));
         }
@@ -145,10 +154,31 @@ public class JunitTestSuite {
         System.exit(result.getFailureCount());
     }
 
+    private Optional<JarFileFilter> createJarFileFilterFromPatternOption(OptionSet options, OptionSpec<String> patternOption) {
+        final List<String> patternList = patternOption.values(options);
+        if (patternList.isEmpty()) {
+            return Optional.empty();
+        } else {
+            JarFileFilter filter = JarFileFilter.none();
+            for (String pattern : patternList) {
+                filter = filter.or(JarFileFilter.wildcard(pattern));
+            }
+            return Optional.of(filter);
+        }
+    }
+
+    private JarFileFilter createTestJarFileFilter(OptionSet options, OptionSpec<String> includePatternOption, OptionSpec<String> excludePatternOption) {
+        final JarFileFilter includeFilter = createJarFileFilterFromPatternOption(options, includePatternOption).orElse(JarFileFilter.any());
+        final JarFileFilter excludeFilter = createJarFileFilterFromPatternOption(options, excludePatternOption).orElse(JarFileFilter.none());
+        return JarFileFilter.wildcard("*.jar").and(
+                includeFilter.and(JarFileFilter.not(excludeFilter))
+        );
+    }
+
     private CoverageAgent createCoverageAgent(OptionSet options) {
         switch (coverageOption.value(options)) {
-            case Jacoco:
-                LOGGER.info("Jacoco coverage enabled");
+            case JaCoCo:
+                LOGGER.info("JaCoCo coverage enabled");
                 return new JacocoCoverageAgent();
             case None:
             default:
