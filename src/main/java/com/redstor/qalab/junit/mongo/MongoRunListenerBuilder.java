@@ -18,6 +18,7 @@ public class MongoRunListenerBuilder {
     private String databaseName = "junit-tests";
     private String testRunsCollectionName = "testruns";
     private String testPointsCollectionName = "testpoints";
+    private String runId = null;
     private CoverageAgent agent = null;
 
     public MongoRunListenerBuilder host(final String host) {
@@ -45,6 +46,11 @@ public class MongoRunListenerBuilder {
         return this;
     }
 
+    public MongoRunListenerBuilder runId(final String runId) {
+        this.runId = runId;
+        return this;
+    }
+
     public MongoRunListenerBuilder agent(final CoverageAgent agent) {
         this.agent = agent;
         return this;
@@ -66,6 +72,6 @@ public class MongoRunListenerBuilder {
         final MongoDatabase database = mongo.getDatabase(databaseName);
         final MongoCollection<MongoTestRun> testRuns = database.getCollection(testRunsCollectionName, MongoTestRun.class);
         final MongoCollection<MongoTestPoint> testPoints = database.getCollection(testPointsCollectionName, MongoTestPoint.class);
-        return new MongoTestListener(testRuns, testPoints, Optional.ofNullable(agent));
+        return new MongoTestListener(testRuns, testPoints, Optional.ofNullable(runId), Optional.ofNullable(agent));
     }
 }

@@ -29,6 +29,7 @@ public class JunitTestSuite {
     private final OptionSpec<PublishTarget> publishOption;
     private final OptionSpec<String> mongoHostOption;
     private final OptionSpec<Integer> mongoPortOption;
+    private final OptionSpec<String> mongoRunIdOption;
     private final OptionSpec<Void> helpOption;
     private final OptionSpec<CoverageTool> coverageOption;
     private final OptionSpec<String> coverageJarPatternOption;
@@ -45,6 +46,7 @@ public class JunitTestSuite {
         publishOption = parser.accepts("publish", "Publish results [Console, MongoDB]").withRequiredArg().ofType(PublishTarget.class).defaultsTo(PublishTarget.Console);
         mongoHostOption = parser.accepts("mongo-host", "MongoDB host").withRequiredArg().defaultsTo("localhost");
         mongoPortOption = parser.accepts("mongo-port", "MongoDB port").withRequiredArg().ofType(Integer.class).defaultsTo(27017);
+        mongoRunIdOption = parser.accepts("mongo-run-id", "MongoDB test run id").withRequiredArg();
         coverageOption = parser.accepts("coverage", "Tool to use to track test coverage [None, Jacoco]").withRequiredArg().ofType(CoverageTool.class).defaultsTo(CoverageTool.None);
         coverageJarPatternOption = parser.accepts("coverage-jars", "Jar pattern for which to generate coverage reports").withRequiredArg().defaultsTo("*.jar");
         reportCoverageOption = parser.accepts("report-coverage", "Generate a coverage report");
@@ -175,6 +177,7 @@ public class JunitTestSuite {
                         .host(mongoHostOption.value(options))
                         .port(mongoPortOption.value(options))
                         .agent(agent)
+                        .runId(options.has(mongoRunIdOption) ? mongoRunIdOption.value(options) : null)
                         .build();
                 break;
             case Console:

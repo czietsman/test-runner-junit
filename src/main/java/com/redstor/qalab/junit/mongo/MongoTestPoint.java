@@ -121,7 +121,7 @@ class MongoTestPoint implements Bson {
         return document.toBsonDocument(tDocumentClass, codecRegistry);
     }
 
-    public Bson find() {
+    public Bson filterById() {
         return eq("_id", getId());
     }
 }

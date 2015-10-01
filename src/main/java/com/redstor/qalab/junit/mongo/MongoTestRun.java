@@ -93,7 +93,11 @@ class MongoTestRun implements Bson {
         return document.toBsonDocument(tDocumentClass, codecRegistry);
     }
 
-    public Bson find() {
-        return eq("_id", getId());
+    public Bson filterById() {
+        return filterById(getId());
+    }
+
+    public static Bson filterById(ObjectId id) {
+        return eq("_id", id);
     }
 }

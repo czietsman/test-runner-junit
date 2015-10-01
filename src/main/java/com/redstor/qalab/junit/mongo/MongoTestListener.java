@@ -1,8 +1,11 @@
 package com.redstor.qalab.junit.mongo;
 
 import com.google.common.base.Charsets;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.redstor.qalab.junit.CoverageAgent;
+import org.bson.types.ObjectId;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -14,6 +17,8 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkState;
 
 class MongoTestListener extends RunListener {
     private static final Charset CHARSET = Charsets.UTF_8;
@@ -30,15 +35,16 @@ class MongoTestListener extends RunListener {
 
     private PrintStream defaultStdOut;
     private PrintStream defaultStdErr;
+
+    private Optional<String> runId;
     private MongoTestRun run = new MongoTestRun();
-    private MongoTestPoint point = new MongoTestPoint();
+    private MongoTestPoint point = null;
 
     private ByteArrayOutputStream testStdOut;
     private ByteArrayOutputStream testStdErr;
-    private Outcome outcome;
-    private Failure failure;
 
-    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<CoverageAgent> agent) {
+    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<String> runId, Optional<CoverageAgent> agent) {
+        this.runId = runId;
         this.testRuns = testRuns;
         this.testPoints = testPoints;
         this.agent = agent;
@@ -48,9 +54,30 @@ class MongoTestListener extends RunListener {
 
     @Override
     public void testRunStarted(Description description) throws Exception {
-        run = new MongoTestRun();
+        if (runId.isPresent()) {
+            final ObjectId runObjectId = new ObjectId(runId.get());
+            final FindIterable<MongoTestRun> iterable = testRuns.find(MongoTestRun.filterById(runObjectId));
+            final MongoCursor<MongoTestRun> iterator = iterable.iterator();
+            if (iterator.hasNext()) {
+                run = iterator.next();
+                checkState(!iterator.hasNext(), "run must be unique");
+
+                initTestRun(run);
+                testRuns.replaceOne(run.filterById(), run);
+            } else {
+                run = new MongoTestRun(runObjectId);
+                initTestRun(run);
+                testRuns.insertOne(run);
+            }
+        } else {
+            run = new MongoTestRun();
+            initTestRun(run);
+            testRuns.insertOne(run);
+        }
+    }
+
+    private void initTestRun(MongoTestRun run) {
         run.setStartTime(Instant.now());
-        testRuns.insertOne(run);
     }
 
     @Override
@@ -61,7 +88,7 @@ class MongoTestListener extends RunListener {
         run.setFailureCount(result.getFailureCount());
         agent.ifPresent(a -> run.setExecutionData(a.getExecutionData(false)));
 
-        testRuns.findOneAndReplace(run.find(), run);
+        testRuns.findOneAndReplace(run.filterById(), run);
     }
 
     private PrintStream createPrintStream(ByteArrayOutputStream testStdOut) {
@@ -73,14 +100,20 @@ class MongoTestListener extends RunListener {
     }
 
     @Override
+    public void testIgnored(Description description) {
+        testStarted(description);
+        submit(Outcome.IGNORED, null);
+    }
+
+    @Override
     public void testStarted(Description description) {
         MongoTestPoint point = new MongoTestPoint();
         point.setRunId(run.getId());
         point.setStartTime(Instant.now());
         point.setClassName(description.getClassName());
         point.setMethodName(description.getMethodName());
+
         this.point = point;
-        this.outcome = Outcome.PASSED;
         this.testPoints.insertOne(point);
 
         // redirect standard out and err for this test
@@ -92,22 +125,26 @@ class MongoTestListener extends RunListener {
 
     @Override
     public void testFailure(Failure failure) {
-        this.outcome = Outcome.FAILED;
-        this.failure = failure;
-    }
-
-    @Override
-    public void testIgnored(Description description) {
-        this.outcome = Outcome.IGNORED;
+        submit(Outcome.FAILED, failure);
     }
 
     @Override
     public void testAssumptionFailure(Failure failure) {
-        this.outcome = Outcome.SKIPPED;
+        submit(Outcome.SKIPPED, failure);
     }
 
     @Override
     public void testFinished(Description description) throws Exception {
+        submit(Outcome.PASSED, null);
+    }
+
+    private void submit(Outcome outcome, Failure failure) {
+        // only submit a tet point only once
+        if (point == null) {
+            return;
+        }
+
+        // update the point fields depending on the outcome
         point.setEndTime(Instant.now());
         switch (outcome) {
             case PASSED:
@@ -134,7 +171,9 @@ class MongoTestListener extends RunListener {
         System.setOut(defaultStdOut);
         System.setErr(defaultStdErr);
 
-        this.testPoints.findOneAndReplace(point.find(), point);
+        // submit the result
+        this.testPoints.findOneAndReplace(point.filterById(), point);
+        this.point = null;
     }
 
 }
