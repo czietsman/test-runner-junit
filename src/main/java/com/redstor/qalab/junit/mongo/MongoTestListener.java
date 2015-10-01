@@ -5,11 +5,14 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.redstor.qalab.junit.CoverageAgent;
+import com.redstor.qalab.junit.Markers;
 import org.bson.types.ObjectId;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -21,10 +24,12 @@ import java.util.Optional;
 import static com.google.common.base.Preconditions.checkState;
 
 class MongoTestListener extends RunListener {
+    private final Logger LOGGER = LoggerFactory.getLogger(MongoTestListener.class);
     private static final Charset CHARSET = Charsets.UTF_8;
     private final MongoCollection<MongoTestRun> testRuns;
     private final MongoCollection<MongoTestPoint> testPoints;
     private final Optional<CoverageAgent> agent;
+    private final MongoRedirectStrategy redirectStrategy;
 
     enum Outcome {
         PASSED,
@@ -40,14 +45,15 @@ class MongoTestListener extends RunListener {
     private MongoTestRun run = new MongoTestRun();
     private MongoTestPoint point = null;
 
-    private ByteArrayOutputStream testStdOut;
-    private ByteArrayOutputStream testStdErr;
+    private Optional<ByteArrayOutputStream> testStdOut = Optional.empty();
+    private Optional<ByteArrayOutputStream> testStdErr = Optional.empty();
 
-    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<String> runId, Optional<CoverageAgent> agent) {
+    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<String> runId, Optional<CoverageAgent> agent, MongoRedirectStrategy redirectStrategy) {
         this.runId = runId;
         this.testRuns = testRuns;
         this.testPoints = testPoints;
         this.agent = agent;
+        this.redirectStrategy = redirectStrategy;
         this.defaultStdOut = System.out;
         this.defaultStdErr = System.err;
     }
@@ -117,10 +123,31 @@ class MongoTestListener extends RunListener {
         this.testPoints.insertOne(point);
 
         // redirect standard out and err for this test
-        testStdOut = new ByteArrayOutputStream();
-        testStdErr = new ByteArrayOutputStream();
-        System.setOut(createPrintStream(testStdOut));
-        System.setErr(createPrintStream(testStdErr));
+        engageTestOutputRedirection();
+    }
+
+    private void engageTestOutputRedirection() {
+        switch (redirectStrategy) {
+            case Split:
+                testStdOut = Optional.of(new ByteArrayOutputStream());
+                testStdErr = Optional.of(new ByteArrayOutputStream());
+                System.setOut(createPrintStream(testStdOut.get()));
+                System.setErr(createPrintStream(testStdErr.get()));
+                break;
+            case Combine:
+                testStdOut = Optional.of(new ByteArrayOutputStream());
+                final PrintStream stream = createPrintStream(testStdOut.get());
+                System.setOut(stream);
+                System.setErr(stream);
+                break;
+            case None:
+                break;
+        }
+    }
+
+    private void disengageTestOutputRedirection() {
+        System.setOut(defaultStdOut);
+        System.setErr(defaultStdErr);
     }
 
     @Override
@@ -149,27 +176,31 @@ class MongoTestListener extends RunListener {
         switch (outcome) {
             case PASSED:
                 point.setOutcome("PASSED");
+                LOGGER.info(Markers.VERBOSE, "{}:{} {}", point.getClassName(), point.getMethodName(), point.getOutcome());
                 break;
             case FAILED:
                 point.setOutcome("FAILED");
                 point.setErrorMessage(failure.getMessage());
                 point.setErrorTrace(failure.getTrace());
+                LOGGER.error("{}:{} {}", point.getClassName(), point.getMethodName(), point.getOutcome(), failure.getException());
                 break;
             case IGNORED:
                 point.setOutcome("IGNORED");
+                LOGGER.info(Markers.VERBOSE, "{}:{} {}", point.getClassName(), point.getMethodName(), point.getOutcome());
                 break;
             case SKIPPED:
                 point.setOutcome("SKIPPED");
+                LOGGER.info(Markers.VERBOSE, "{}:{} {}", point.getClassName(), point.getMethodName(), point.getOutcome());
                 break;
         }
 
+
         // store standard out and err for this test
-        point.setStdOut(new String(testStdOut.toByteArray(), CHARSET));
-        point.setStdErr(new String(testStdErr.toByteArray(), CHARSET));
+        testStdOut.ifPresent(out -> point.setStdOut(new String(out.toByteArray(), CHARSET)));
+        testStdErr.ifPresent(out -> point.setStdErr(new String(out.toByteArray(), CHARSET)));
 
         // restore the standard out and err streams
-        System.setOut(defaultStdOut);
-        System.setErr(defaultStdErr);
+        disengageTestOutputRedirection();
 
         // submit the result
         this.testPoints.findOneAndReplace(point.filterById(), point);

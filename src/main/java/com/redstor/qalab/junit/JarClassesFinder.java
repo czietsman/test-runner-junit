@@ -58,11 +58,11 @@ class JarClassesFinder implements ClassesFinder {
                 continue;
             }
 
-            LOGGER.info(VERBOSE, "Examining class {}", jarEntry.getName());
+            LOGGER.info(VERBOSE, "Collecting class {}", jarEntry.getName());
             try (InputStream in = jar.getInputStream(jarEntry)) {
-                collector.loadClass(jarEntry.getName(), in);
+                collector.collect(jarEntry.getName(), in);
             } catch (Throwable ex) {
-                LOGGER.error(VERBOSE, "Could not load class {}", jarEntry.getName(), ex);
+                LOGGER.error(VERBOSE, "Failed to collect class {}", jarEntry.getName(), ex);
             }
         }
     }

@@ -20,6 +20,7 @@ public class MongoRunListenerBuilder {
     private String testPointsCollectionName = "testpoints";
     private String runId = null;
     private CoverageAgent agent = null;
+    private MongoRedirectStrategy redirectStrategy = MongoRedirectStrategy.Split;
 
     public MongoRunListenerBuilder host(final String host) {
         this.host = host;
@@ -56,6 +57,11 @@ public class MongoRunListenerBuilder {
         return this;
     }
 
+    public MongoRunListenerBuilder redirectStrategy(final MongoRedirectStrategy redirectStrategy) {
+        this.redirectStrategy = redirectStrategy;
+        return this;
+    }
+
     public RunListener build() {
         final CodecRegistry defaultCodecRegistry = MongoClient.getDefaultCodecRegistry();
         CodecRegistry codecRegistry = CodecRegistries.fromRegistries(
@@ -72,6 +78,6 @@ public class MongoRunListenerBuilder {
         final MongoDatabase database = mongo.getDatabase(databaseName);
         final MongoCollection<MongoTestRun> testRuns = database.getCollection(testRunsCollectionName, MongoTestRun.class);
         final MongoCollection<MongoTestPoint> testPoints = database.getCollection(testPointsCollectionName, MongoTestPoint.class);
-        return new MongoTestListener(testRuns, testPoints, Optional.ofNullable(runId), Optional.ofNullable(agent));
+        return new MongoTestListener(testRuns, testPoints, Optional.ofNullable(runId), Optional.ofNullable(agent), redirectStrategy);
     }
 }

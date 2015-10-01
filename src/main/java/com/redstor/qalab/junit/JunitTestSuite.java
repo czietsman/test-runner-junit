@@ -4,6 +4,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.turbo.MarkerFilter;
 import ch.qos.logback.core.spi.FilterReply;
 import com.redstor.qalab.junit.jacoco.JacocoCoverageAgent;
+import com.redstor.qalab.junit.mongo.MongoRedirectStrategy;
 import com.redstor.qalab.junit.mongo.MongoRunListenerBuilder;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -31,6 +32,7 @@ public class JunitTestSuite {
     private final OptionSpec<String> mongoHostOption;
     private final OptionSpec<Integer> mongoPortOption;
     private final OptionSpec<String> mongoRunIdOption;
+    private final OptionSpec<MongoRedirectStrategy> mongoRedirectStrategy;
     private final OptionSpec<Void> helpOption;
     private final OptionSpec<CoverageTool> coverageOption;
     private final OptionSpec<String> coverageJarIncludePatternOption;
@@ -50,6 +52,7 @@ public class JunitTestSuite {
         mongoHostOption = parser.accepts("mongo-host", "MongoDB host").withRequiredArg().defaultsTo("localhost");
         mongoPortOption = parser.accepts("mongo-port", "MongoDB port").withRequiredArg().ofType(Integer.class).defaultsTo(27017);
         mongoRunIdOption = parser.accepts("mongo-run-id", "MongoDB test run id").withRequiredArg();
+        mongoRedirectStrategy = parser.accepts("mongo-redirect-strategy", "MongoDB strategy to use for redirecting test output [Node, Split, Combine]").withRequiredArg().ofType(MongoRedirectStrategy.class).defaultsTo(MongoRedirectStrategy.Split);
         coverageOption = parser.accepts("coverage", "Tool to use to track test coverage [None, JaCoCo]").withRequiredArg().ofType(CoverageTool.class).defaultsTo(CoverageTool.None);
         coverageJarIncludePatternOption = parser.acceptsAll(Arrays.asList("ci", "coverage-include-jars"), "Jar filename pattern to include for coverage reports").withRequiredArg();
         coverageJarExcludePatternOption = parser.acceptsAll(Arrays.asList("ce", "coverage-exclude-jars"), "Jar filename pattern to exclude from coverage reports").withRequiredArg();
@@ -208,6 +211,7 @@ public class JunitTestSuite {
                         .port(mongoPortOption.value(options))
                         .agent(agent)
                         .runId(options.has(mongoRunIdOption) ? mongoRunIdOption.value(options) : null)
+                        .redirectStrategy(mongoRedirectStrategy.value(options))
                         .build();
                 break;
             case Console:
