@@ -31,7 +31,7 @@ dependencies {
         exclude module: 'org.jacoco.doc'
         exclude module: 'org.jacoco.ant'
     }
-    compile 'org.jacoco:org.jacoco.agent'
+    compile "org.jacoco:org.jacoco.agent:$jacocoVersion"
 
     testCompile 'org.easymock:easymock:3.3.1'
 }
