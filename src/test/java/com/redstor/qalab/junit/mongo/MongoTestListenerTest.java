@@ -49,7 +49,7 @@ public class MongoTestListenerTest {
     @Test
     public void testTestRunStarted_RunIdUnspecified() throws Exception {
 
-        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.<String>empty(), Optional.<CoverageAgent>empty(), MongoRedirectStrategy.Split);
+        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.<String>empty(), MongoRedirectStrategy.Split);
         final Description description = Description.createTestDescription(MongoTestListenerTest.class, "testTestRunStarted");
 
         testRuns.insertOne(anyObject());
@@ -66,7 +66,7 @@ public class MongoTestListenerTest {
     public void testTestRunStarted_NewRunId() throws Exception {
 
         final ObjectId runId = new ObjectId();
-        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.of(runId.toHexString()), Optional.<CoverageAgent>empty(), MongoRedirectStrategy.Split);
+        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.of(runId.toHexString()), MongoRedirectStrategy.Split);
         final Description description = Description.createTestDescription(MongoTestListenerTest.class, "testTestRunStarted");
         final FindIterable<MongoTestRun> findResult = createFindIterableMock();
         final MongoCursor<MongoTestRun> findCursor = createMongoCursorMock();
@@ -92,7 +92,7 @@ public class MongoTestListenerTest {
     public void testTestRunStarted_ExistingRunId() throws Exception {
 
         final ObjectId runId = new ObjectId();
-        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.of(runId.toHexString()), Optional.<CoverageAgent>empty(), MongoRedirectStrategy.Split);
+        final MongoTestListener listener = new MongoTestListener(testRuns, testPoints, Optional.of(runId.toHexString()), MongoRedirectStrategy.Split);
         final Description description = Description.createTestDescription(MongoTestListenerTest.class, "testTestRunStarted");
         final FindIterable<MongoTestRun> findResult = createFindIterableMock();
         final MongoCursor<MongoTestRun> findCursor = createMongoCursorMock();

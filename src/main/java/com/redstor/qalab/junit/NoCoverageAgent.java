@@ -1,7 +1,7 @@
 package com.redstor.qalab.junit;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 public class NoCoverageAgent implements CoverageAgent {
     @Override
@@ -14,6 +14,6 @@ public class NoCoverageAgent implements CoverageAgent {
     }
 
     @Override
-    public void publish(ClassesFinder classesFinder, File sourceDir, File reportDir) throws IOException {
+    public void publish(CoverageListener listener, Optional<AnalyseCoverageRequest> analyseCoverageRequest, Optional<ExportCoverageRequest> exportCoverageRequest) throws IOException {
     }
 }

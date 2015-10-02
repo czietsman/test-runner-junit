@@ -4,13 +4,14 @@ import com.google.common.base.Charsets;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
+import com.redstor.qalab.junit.AbstractTestListener;
 import com.redstor.qalab.junit.CoverageAgent;
+import com.redstor.qalab.junit.CoverageAnalysisResult;
 import com.redstor.qalab.junit.Markers;
 import org.bson.types.ObjectId;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +24,11 @@ import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkState;
 
-class MongoTestListener extends RunListener {
+class MongoTestListener extends AbstractTestListener {
     private final Logger LOGGER = LoggerFactory.getLogger(MongoTestListener.class);
     private static final Charset CHARSET = Charsets.UTF_8;
     private final MongoCollection<MongoTestRun> testRuns;
     private final MongoCollection<MongoTestPoint> testPoints;
-    private final Optional<CoverageAgent> agent;
     private final MongoRedirectStrategy redirectStrategy;
 
     enum Outcome {
@@ -48,11 +48,10 @@ class MongoTestListener extends RunListener {
     private Optional<ByteArrayOutputStream> testStdOut = Optional.empty();
     private Optional<ByteArrayOutputStream> testStdErr = Optional.empty();
 
-    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<String> runId, Optional<CoverageAgent> agent, MongoRedirectStrategy redirectStrategy) {
+    public MongoTestListener(MongoCollection<MongoTestRun> testRuns, MongoCollection<MongoTestPoint> testPoints, Optional<String> runId, MongoRedirectStrategy redirectStrategy) {
         this.runId = runId;
         this.testRuns = testRuns;
         this.testPoints = testPoints;
-        this.agent = agent;
         this.redirectStrategy = redirectStrategy;
         this.defaultStdOut = System.out;
         this.defaultStdErr = System.err;
@@ -92,8 +91,16 @@ class MongoTestListener extends RunListener {
         run.setRunCount(result.getRunCount());
         run.setIgnoreCount(result.getIgnoreCount());
         run.setFailureCount(result.getFailureCount());
-        agent.ifPresent(a -> run.setExecutionData(a.getExecutionData(false)));
+        testRuns.findOneAndReplace(run.filterById(), run);
+    }
 
+    @Override
+    public void analysis(byte[] executionData, Optional<CoverageAnalysisResult> analysisResult) {
+        run.setExecutionData(executionData);
+        analysisResult.ifPresent(a -> {
+            run.setInstructionsCoveredRatio(a.getInstructionsCoveredRatio());
+            run.setBranchesCoveredRatio(a.getBranchesCoveredRatio());
+        });
         testRuns.findOneAndReplace(run.filterById(), run);
     }
 

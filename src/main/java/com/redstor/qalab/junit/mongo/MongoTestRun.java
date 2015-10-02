@@ -88,6 +88,22 @@ class MongoTestRun implements Bson {
         }
     }
 
+    public Double getInstructionsCoveredRatio() {
+        return document.getDouble("instructionsCoveredRatio");
+    }
+
+    public void setInstructionsCoveredRatio(double instructionsCoveredRatio) {
+        document.put("instructionsCoveredRatio", instructionsCoveredRatio);
+    }
+
+    public Double getBranchesCoveredRatio() {
+        return document.getDouble("branchesCoveredRatio");
+    }
+
+    public void setBranchesCoveredRatio(double branchesCoveredRatio) {
+        document.put("branchesCoveredRatio", branchesCoveredRatio);
+    }
+
     @Override
     public <TDocument> BsonDocument toBsonDocument(Class<TDocument> tDocumentClass, CodecRegistry codecRegistry) {
         return document.toBsonDocument(tDocumentClass, codecRegistry);

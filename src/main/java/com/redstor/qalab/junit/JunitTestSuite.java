@@ -5,7 +5,7 @@ import ch.qos.logback.classic.turbo.MarkerFilter;
 import ch.qos.logback.core.spi.FilterReply;
 import com.redstor.qalab.junit.jacoco.JacocoCoverageAgent;
 import com.redstor.qalab.junit.mongo.MongoRedirectStrategy;
-import com.redstor.qalab.junit.mongo.MongoRunListenerBuilder;
+import com.redstor.qalab.junit.mongo.MongoTestListenerBuilder;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -13,7 +13,6 @@ import org.junit.runner.Computer;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.Result;
-import org.junit.runner.notification.RunListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,7 +130,7 @@ public class JunitTestSuite {
         }
 
         final CoverageAgent agent = createCoverageAgent(options);
-        final RunListener listener = createRunListener(options, agent);
+        final AbstractTestListener listener = createTestListener(options);
         final Optional<CategoryFilter> filter = createCategoryFilter(options);
 
         // start testing
@@ -150,17 +149,29 @@ public class JunitTestSuite {
         LOGGER.info("Testing finished");
 
         // save the coverage report
+        final Optional<AnalyseCoverageRequest> analyseCoverageRequest = createAnalyseCoverageRequest(options, jarFolders);
+        final Optional<ExportCoverageRequest> exportCoverageRequest = createExportCoverageRequest(options);
+        agent.publish(listener, analyseCoverageRequest, exportCoverageRequest);
+
+        System.exit(result.getFailureCount());
+    }
+
+    private Optional<AnalyseCoverageRequest> createAnalyseCoverageRequest(OptionSet options, List<String> jarFolders) {
+        final JarFileFilter reportJarFileFilter = createTestJarFileFilter(options, coverageJarIncludePatternOption, coverageJarExcludePatternOption);
+        final JarFinder reportJarFinder = concatenateDirectoryJarFinders(jarFolders, reportJarFileFilter);
+        return Optional.of(new AnalyseCoverageRequest(new JarClassesFinder(reportJarFinder)));
+    }
+
+    private Optional<ExportCoverageRequest> createExportCoverageRequest(OptionSet options) {
+        Optional<ExportCoverageRequest> exportCoverageRequest = Optional.empty();
         if (options.has(coverageReportOption)) {
             final File sourceDir = new File(coverageSourceOption.value(options));
             final File reportDir = new File(coverageReportOption.value(options));
 
             LOGGER.info("Save coverage report to '{}'", reportDir);
-            final JarFileFilter reportJarFileFilter = createTestJarFileFilter(options, coverageJarIncludePatternOption, coverageJarExcludePatternOption);
-            final JarFinder reportJarFinder = concatenateDirectoryJarFinders(jarFolders, reportJarFileFilter);
-            agent.publish(new JarClassesFinder(reportJarFinder), sourceDir, reportDir);
+            exportCoverageRequest = Optional.of(new ExportCoverageRequest(sourceDir, reportDir));
         }
-
-        System.exit(result.getFailureCount());
+        return exportCoverageRequest;
     }
 
     private Optional<JarFileFilter> createJarFileFilterFromPatternOption(OptionSet options, OptionSpec<String> patternOption) {
@@ -208,21 +219,20 @@ public class JunitTestSuite {
         return filter;
     }
 
-    private RunListener createRunListener(OptionSet options, CoverageAgent agent) {
-        RunListener listener;
+    private AbstractTestListener createTestListener(OptionSet options) {
+        AbstractTestListener listener;
         switch (publishOption.value(options)) {
             case MongoDB:
-                listener = new MongoRunListenerBuilder()
+                listener = new MongoTestListenerBuilder()
                         .host(mongoHostOption.value(options))
                         .port(mongoPortOption.value(options))
-                        .agent(agent)
                         .runId(options.has(mongoRunIdOption) ? mongoRunIdOption.value(options) : null)
                         .redirectStrategy(mongoRedirectStrategy.value(options))
                         .build();
                 break;
             case Console:
             default:
-                listener = new TestListener(System.out);
+                listener = new ConsoleTestListener(System.out);
         }
         return listener;
     }

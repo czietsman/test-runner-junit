@@ -1,11 +1,7 @@
 package com.redstor.qalab.junit.jacoco;
 
-import com.redstor.qalab.junit.ClassesFinder;
-import org.jacoco.agent.rt.IAgent;
-import org.jacoco.core.analysis.Analyzer;
-import org.jacoco.core.analysis.CoverageBuilder;
+import com.redstor.qalab.junit.ExportCoverageRequest;
 import org.jacoco.core.analysis.IBundleCoverage;
-import org.jacoco.core.data.ExecutionDataReader;
 import org.jacoco.core.data.ExecutionDataStore;
 import org.jacoco.core.data.SessionInfoStore;
 import org.jacoco.report.DirectorySourceFileLocator;
@@ -13,39 +9,19 @@ import org.jacoco.report.FileMultiReportOutput;
 import org.jacoco.report.IReportVisitor;
 import org.jacoco.report.html.HTMLFormatter;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 
 class JacocoCoverageReporter {
-    private final IAgent agent;
     private final File sourceDir;
     private final File reportDir;
 
-    public JacocoCoverageReporter(IAgent agent, File sourceDir, File reportDir) {
-        this.agent = agent;
-        this.sourceDir = sourceDir;
-        this.reportDir = reportDir;
+    public JacocoCoverageReporter(ExportCoverageRequest request) {
+        this.sourceDir = request.getSourceDir();
+        this.reportDir = request.getReportDir();
     }
 
-    public void publish(ClassesFinder classesFinder) throws IOException {
-        final ExecutionDataReader reader = new ExecutionDataReader(new ByteArrayInputStream(agent.getExecutionData(false)));
-        final ExecutionDataStore executionDataStore = new ExecutionDataStore();
-        reader.setExecutionDataVisitor(executionDataStore);
-        final SessionInfoStore sessionInfoStore = new SessionInfoStore();
-        reader.setSessionInfoVisitor(sessionInfoStore);
-        reader.read();
-
-        final CoverageBuilder coverageBuilder = new CoverageBuilder();
-        final Analyzer analyzer = new Analyzer(executionDataStore, coverageBuilder);
-
-        classesFinder.find((name, in) -> analyzer.analyzeClass(in, name));
-
-        final IBundleCoverage bundle = coverageBuilder.getBundle("");
-        publish(bundle, sessionInfoStore, executionDataStore);
-    }
-
-    private void publish(final IBundleCoverage bundleCoverage, SessionInfoStore sessionInfoStore, ExecutionDataStore executionDataStore)
+    public void publish(final IBundleCoverage bundleCoverage, SessionInfoStore sessionInfoStore, ExecutionDataStore executionDataStore)
             throws IOException {
 
         // Create a concrete report visitor based on some supplied
