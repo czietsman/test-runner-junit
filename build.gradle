@@ -10,7 +10,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 mainClassName = "com.redstor.qalab.junit.JunitTestSuite"
-applicationDefaultJvmArgs = ["-javaagent:org.jacoco.agent-${jacocoVersion}-runtime.jar=output=none"]
+applicationDefaultJvmArgs = ["-javaagent:MY_APP_LIBorg.jacoco.agent-${jacocoVersion}-runtime.jar=output=none"]
 
 repositories {
     mavenCentral()
@@ -34,4 +34,11 @@ dependencies {
     compile 'org.jacoco:org.jacoco.agent'
 
     testCompile 'org.easymock:easymock:3.3.1'
+}
+
+startScripts {
+    doLast {
+        unixScript.text = unixScript.text.replace('MY_APP_LIB', '\$APP_HOME/lib/')
+        windowsScript.text = windowsScript.text.replace('MY_APP_LIB', '%~dp0..\\lib\\')
+    }
 }
