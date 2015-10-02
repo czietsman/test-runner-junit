@@ -154,7 +154,7 @@ public class JunitTestSuite {
             final File sourceDir = new File(coverageSourceOption.value(options));
             final File reportDir = new File(coverageReportOption.value(options));
 
-            LOGGER.info("Save coverage report to {}", reportDir);
+            LOGGER.info("Save coverage report to '{}'", reportDir);
             final JarFileFilter reportJarFileFilter = createTestJarFileFilter(options, coverageJarIncludePatternOption, coverageJarExcludePatternOption);
             final JarFinder reportJarFinder = concatenateDirectoryJarFinders(jarFolders, reportJarFileFilter);
             agent.publish(new JarClassesFinder(reportJarFinder), sourceDir, reportDir);
