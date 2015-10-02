@@ -6,8 +6,8 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
-import java.sql.Date;
 import java.time.Instant;
+import java.util.Date;
 
 import static com.mongodb.client.model.Filters.eq;
 

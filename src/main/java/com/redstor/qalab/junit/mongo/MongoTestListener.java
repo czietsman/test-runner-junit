@@ -203,7 +203,7 @@ class MongoTestListener extends RunListener {
         disengageTestOutputRedirection();
 
         // submit the result
-        this.testPoints.findOneAndReplace(point.filterById(), point);
+        this.testPoints.replaceOne(point.filterById(), point);
         this.point = null;
     }
 
