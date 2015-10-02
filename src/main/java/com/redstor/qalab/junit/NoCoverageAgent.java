@@ -1,5 +1,6 @@
 package com.redstor.qalab.junit;
 
+import java.io.File;
 import java.io.IOException;
 
 public class NoCoverageAgent implements CoverageAgent {
@@ -13,6 +14,6 @@ public class NoCoverageAgent implements CoverageAgent {
     }
 
     @Override
-    public void publish(ClassesFinder classesFinder) throws IOException {
+    public void publish(ClassesFinder classesFinder, File sourceDir, File reportDir) throws IOException {
     }
 }

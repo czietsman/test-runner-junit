@@ -5,6 +5,7 @@ import com.redstor.qalab.junit.CoverageAgent;
 import org.jacoco.agent.rt.IAgent;
 import org.jacoco.agent.rt.RT;
 
+import java.io.File;
 import java.io.IOException;
 
 public class JacocoCoverageAgent implements CoverageAgent {
@@ -25,8 +26,8 @@ public class JacocoCoverageAgent implements CoverageAgent {
     }
 
     @Override
-    public void publish(ClassesFinder classesFinder) throws IOException {
-        final JacocoCoverageReporter publisher = new JacocoCoverageReporter(agent);
+    public void publish(ClassesFinder classesFinder, File sourceDir, File reportDir) throws IOException {
+        final JacocoCoverageReporter publisher = new JacocoCoverageReporter(agent, sourceDir, reportDir);
         publisher.publish(classesFinder);
     }
 }

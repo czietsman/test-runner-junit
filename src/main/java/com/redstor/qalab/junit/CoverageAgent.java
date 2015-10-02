@@ -1,5 +1,6 @@
 package com.redstor.qalab.junit;
 
+import java.io.File;
 import java.io.IOException;
 
 public interface CoverageAgent {
@@ -7,5 +8,5 @@ public interface CoverageAgent {
 
     byte[] getExecutionData(boolean reset);
 
-    void publish(ClassesFinder classesFinder) throws IOException;
+    void publish(ClassesFinder classesFinder, File sourceDir, File reportDir) throws IOException;
 }

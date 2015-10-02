@@ -17,6 +17,7 @@ import org.junit.runner.notification.RunListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -37,7 +38,8 @@ public class JunitTestSuite {
     private final OptionSpec<CoverageTool> coverageOption;
     private final OptionSpec<String> coverageJarIncludePatternOption;
     private final OptionSpec<String> coverageJarExcludePatternOption;
-    private final OptionSpec<Void> coverageReportOption;
+    private final OptionSpec<String> coverageSourceOption;
+    private final OptionSpec<String> coverageReportOption;
     private final OptionSpec<String> includeCategoryOption;
     private final OptionSpec<String> excludeCategoryOption;
 
@@ -56,7 +58,8 @@ public class JunitTestSuite {
         coverageOption = parser.accepts("coverage", "Tool to use to track test coverage [None, JaCoCo]").withRequiredArg().ofType(CoverageTool.class).defaultsTo(CoverageTool.None);
         coverageJarIncludePatternOption = parser.acceptsAll(Arrays.asList("ci", "coverage-include-jars"), "Jar filename pattern to include for coverage reports").withRequiredArg();
         coverageJarExcludePatternOption = parser.acceptsAll(Arrays.asList("ce", "coverage-exclude-jars"), "Jar filename pattern to exclude from coverage reports").withRequiredArg();
-        coverageReportOption = parser.accepts("coverage-report", "Save a coverage report");
+        coverageSourceOption = parser.accepts("coverage-source", "Directory where source files can be found").withRequiredArg().defaultsTo("source");
+        coverageReportOption = parser.accepts("coverage-report", "Directory where report files should be created").withRequiredArg();
 
         helpOption = parser.accepts("help").forHelp();
         includeCategoryOption = parser.accepts("include", "Category to include").withRequiredArg().describedAs("Category class name");
@@ -148,10 +151,13 @@ public class JunitTestSuite {
 
         // save the coverage report
         if (options.has(coverageReportOption)) {
-            LOGGER.info("Dumping coverage report");
+            final File sourceDir = new File(coverageSourceOption.value(options));
+            final File reportDir = new File(coverageReportOption.value(options));
+
+            LOGGER.info("Save coverage report to {}", reportDir);
             final JarFileFilter reportJarFileFilter = createTestJarFileFilter(options, coverageJarIncludePatternOption, coverageJarExcludePatternOption);
             final JarFinder reportJarFinder = concatenateDirectoryJarFinders(jarFolders, reportJarFileFilter);
-            agent.publish(new JarClassesFinder(reportJarFinder));
+            agent.publish(new JarClassesFinder(reportJarFinder), sourceDir, reportDir);
         }
 
         System.exit(result.getFailureCount());

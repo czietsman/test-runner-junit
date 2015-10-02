@@ -19,9 +19,13 @@ import java.io.IOException;
 
 class JacocoCoverageReporter {
     private final IAgent agent;
+    private final File sourceDir;
+    private final File reportDir;
 
-    public JacocoCoverageReporter(IAgent agent) {
+    public JacocoCoverageReporter(IAgent agent, File sourceDir, File reportDir) {
         this.agent = agent;
+        this.sourceDir = sourceDir;
+        this.reportDir = reportDir;
     }
 
     public void publish(ClassesFinder classesFinder) throws IOException {
@@ -38,16 +42,16 @@ class JacocoCoverageReporter {
         classesFinder.find((name, in) -> analyzer.analyzeClass(in, name));
 
         final IBundleCoverage bundle = coverageBuilder.getBundle("");
-        publish(bundle, sessionInfoStore, executionDataStore, new File("report"), new File("source"));
+        publish(bundle, sessionInfoStore, executionDataStore);
     }
 
-    private void publish(final IBundleCoverage bundleCoverage, SessionInfoStore sessionInfoStore, ExecutionDataStore executionDataStore, File reportDirectory, File sourceDirectory)
+    private void publish(final IBundleCoverage bundleCoverage, SessionInfoStore sessionInfoStore, ExecutionDataStore executionDataStore)
             throws IOException {
 
         // Create a concrete report visitor based on some supplied
         // configuration. In this case we use the defaults
         final HTMLFormatter htmlFormatter = new HTMLFormatter();
-        final IReportVisitor visitor = htmlFormatter.createVisitor(new FileMultiReportOutput(reportDirectory));
+        final IReportVisitor visitor = htmlFormatter.createVisitor(new FileMultiReportOutput(reportDir));
 
         // Initialize the report with all of the execution and session
         // information. At this point the report doesn't know about the
@@ -56,7 +60,7 @@ class JacocoCoverageReporter {
 
         // Populate the report structure with the bundle coverage information.
         // Call visitGroup if you need groups in your report.
-        visitor.visitBundle(bundleCoverage, new DirectorySourceFileLocator(sourceDirectory, "utf-8", 4));
+        visitor.visitBundle(bundleCoverage, new DirectorySourceFileLocator(sourceDir, "utf-8", 4));
 
         // Signal end of structure information to allow report to write all
         // information out
